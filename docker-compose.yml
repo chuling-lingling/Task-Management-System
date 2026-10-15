@@ -1,5 +1,6 @@
 # 一键部署：docker compose up -d --build
 # 默认会拉起 MySQL 8 + 后端（后端同时托管前端静态页面），访问 http://localhost:8000 即可使用。
+# 想换对外访问端口：在 .env 设 HOST_PORT=8070（容器内仍固定 8000），访问 http://localhost:8070。
 #
 # 使用前（重要）：
 #   1. cp .env.example .env  并填写 JWT_SECRET_KEY（openssl rand -hex 32）与 SMTP_* 等
@@ -56,7 +57,8 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8000}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
     ports:
-      - "8000:8000"
+      # 宿主机端口可由 .env 的 HOST_PORT 配置（默认 8000）；容器内固定 8000 不可改
+      - "${HOST_PORT:-8000}:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
       interval: 30s
