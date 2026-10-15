@@ -3,8 +3,13 @@
 # ---------- 1) 构建前端（多阶段） ----------
 FROM node:22-slim AS frontend-builder
 WORKDIR /build
-# 先只拷依赖清单，利用层缓存
-COPY frontend/package.json frontend/package-lock.json ./
+# 只拷 package.json，不使用仓库里的 package-lock.json：
+# 该锁文件在 Windows 上生成（为规避本机原生包缺失，package.json 显式锁定了
+# win32 平台包），锁中缺少 Linux 平台原生包（@rollup/rollup-linux-x64-gnu、
+# @esbuild/linux-x64 等）的可安装条目，容器内构建会报
+# "Cannot find module @rollup/rollup-linux-x64-gnu"（npm/cli#4828）。
+# 这里在 linux/x64 容器内基于 package.json 全新解析，自动装齐当前平台原生包。
+COPY frontend/package.json ./
 RUN npm install --ignore-scripts
 # 再拷源码并构建
 COPY frontend/ ./

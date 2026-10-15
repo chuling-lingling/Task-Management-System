@@ -188,6 +188,8 @@ npm run dev
 > npm install --save-optional --ignore-scripts --registry=https://registry.npmmirror.com \
 >   "@esbuild/win32-x64@0.25.12" "@rollup/rollup-win32-x64-msvc@4.64.6"
 > ```
+>
+> 注意：上述 win32 平台包只服务于 Windows 本机开发。Docker 构建时容器内会基于 `package.json` 全新解析依赖（不使用这份 Windows 锁文件），自动装齐 Linux 原生包，无需任何额外操作。
 
 生产构建：`npm run build`，产物在 `frontend/dist/`。
 
