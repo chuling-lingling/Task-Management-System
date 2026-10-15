@@ -80,8 +80,20 @@ function handleLogout() {
 }
 
 @media (max-width: 640px) {
+  .nav__inner {
+    gap: var(--space-xs);
+  }
+  .nav__actions {
+    gap: var(--space-xs);
+  }
+  /* 保留设置入口（用户名链接），仅压缩字号，避免手机上无法进入设置页 */
   .nav__user {
-    display: none;
+    font-size: var(--text-caption);
+  }
+  .nav__logout {
+    height: 32px;
+    padding: 0 10px;
+    font-size: var(--text-caption);
   }
 }
 </style>

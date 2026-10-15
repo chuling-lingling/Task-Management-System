@@ -25,6 +25,7 @@
 - 🔐 **安全** — Argon2id 密码哈希、JWT 鉴权、越权防护（别人的任务一律按 404 处理）。
 - 🐳 **一键部署** — 多阶段 Docker 镜像，后端同时托管前端页面，`docker compose up -d` 即可使用。
 - 🎨 **清爽界面** — Vue 3 + 设计令牌，超期高亮、完成态删除线、移动端自适应。
+- 📱 **手机可用** — 响应式布局，手机 / 平板浏览器直接打开即可完整使用（含设置提醒邮箱）。
 
 ## 📸 界面预览
 
@@ -35,6 +36,14 @@
 | 已完成 | 账户设置（提醒邮箱） |
 |:---:|:---:|
 | <img src="docs/screenshots/05-done.png" width="380" alt="已完成" /> | <img src="docs/screenshots/04-settings.png" width="380" alt="账户设置" /> |
+
+### 📱 移动端
+
+响应式布局，手机 / 平板浏览器直接打开即可使用（任务列表、新增任务、设置页均已适配，无需额外 App）：
+
+| 移动端 · 任务列表 | 移动端 · 账户设置 |
+|:---:|:---:|
+| <img src="docs/screenshots/mobile-tasks.png" width="300" alt="移动端任务列表" /> | <img src="docs/screenshots/mobile-settings.png" width="300" alt="移动端账户设置" /> |
 
 ## 🚀 快速开始
 
