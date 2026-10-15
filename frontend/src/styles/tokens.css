@@ -1,0 +1,117 @@
+/* 设计令牌：全部取自项目根目录 DESIGN.md，颜色/字号/圆角/间距不得在组件里硬编码 */
+:root {
+  /* 品牌与强调色 */
+  --color-primary: #cc785c;
+  --color-primary-active: #a9583e;
+  --color-primary-disabled: #e6dfd8;
+  --color-accent-teal: #5db8a6;
+  --color-accent-amber: #e8a55a;
+
+  /* 文字 */
+  --color-ink: #141413;
+  --color-body: #3d3d3a;
+  --color-body-strong: #252523;
+  --color-muted: #6c6a64;
+  --color-muted-soft: #8e8b82;
+  --color-on-primary: #ffffff;
+  --color-on-dark: #faf9f5;
+  --color-on-dark-soft: #a09d96;
+
+  /* 表面 */
+  --color-canvas: #faf9f5;
+  --color-surface-soft: #f5f0e8;
+  --color-surface-card: #efe9de;
+  --color-surface-cream-strong: #e8e0d2;
+  --color-surface-dark: #181715;
+  --color-surface-dark-elevated: #252320;
+  --color-hairline: #e6dfd8;
+  --color-hairline-soft: #ebe6df;
+
+  /* 语义色 */
+  --color-success: #5db872;
+  --color-warning: #d4a017;
+  --color-error: #c64545;
+
+  /* 字体：DESIGN.md 的 Copernicus / StyreneB 为授权字体，这里用系统字体近似。
+     若本机装有 Cormorant Garamond / EB Garamond / Inter 会自动优先使用 */
+  --font-display: "Cormorant Garamond", "EB Garamond", Georgia, "Times New Roman",
+    "Songti SC", "SimSun", serif;
+  --font-sans: Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, "Courier New", monospace;
+
+  /* 字号阶梯 */
+  --text-display-xl: 64px;
+  --text-display-lg: 48px;
+  --text-display-md: 36px;
+  --text-display-sm: 28px;
+  --text-title-lg: 22px;
+  --text-title-md: 18px;
+  --text-title-sm: 16px;
+  --text-body-md: 16px;
+  --text-body-sm: 14px;
+  --text-caption: 13px;
+  --text-caption-uppercase: 12px;
+
+  /* 圆角 */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* 间距（4px 基准） */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --space-section: 96px;
+
+  /* 布局 */
+  --container-max: 1200px;
+  --nav-height: 64px;
+}
+
+/* 显示级标题：衬线、weight 400、负字距，三者在 DESIGN.md 中是硬约束 */
+.display-xl,
+.display-lg,
+.display-md,
+.display-sm {
+  font-family: var(--font-display);
+  font-weight: 400;
+  margin: 0;
+}
+.display-xl {
+  font-size: var(--text-display-xl);
+  line-height: 1.05;
+  letter-spacing: -1.5px;
+}
+.display-lg {
+  font-size: var(--text-display-lg);
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+.display-md {
+  font-size: var(--text-display-md);
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+}
+.display-sm {
+  font-size: var(--text-display-sm);
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --text-display-xl: 32px;
+    --text-display-lg: 30px;
+    --text-display-md: 26px;
+    --text-display-sm: 23px;
+    --space-section: 56px;
+  }
+}

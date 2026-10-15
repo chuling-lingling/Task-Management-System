@@ -1,0 +1,279 @@
+/* 基础样式与可复用元素，对应 DESIGN.md 的 components 定义 */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-body);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-md);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:active {
+  text-decoration: underline;
+}
+
+/* ---------- 布局 ---------- */
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+/* ---------- 按钮 ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  height: 40px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* DESIGN.md 约定：按钮只做按下变深，不加 hover 抬升等额外状态 */
+.btn--primary:active:not(:disabled) {
+  background: var(--color-primary-active);
+}
+
+.btn--primary:disabled {
+  background: var(--color-primary-disabled);
+  color: var(--color-muted);
+}
+
+.btn--secondary {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+}
+
+.btn--secondary:active:not(:disabled) {
+  background: var(--color-surface-soft);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn--text {
+  height: auto;
+  padding: 0;
+  background: none;
+  color: var(--color-primary);
+  font-size: var(--text-body-sm);
+}
+
+.btn--text:active {
+  text-decoration: underline;
+}
+
+/* 深色卡片上的次级按钮，系统约定深色面不翻转为浅色 */
+.btn--on-dark {
+  background: var(--color-surface-dark-elevated);
+  color: var(--color-on-dark);
+}
+
+/* ---------- 输入 ---------- */
+.input,
+.textarea {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-md);
+  line-height: 1.4;
+}
+
+.input {
+  height: 40px;
+}
+
+.textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-muted-soft);
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.15);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.field__label {
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--color-body-strong);
+}
+
+.field__hint {
+  font-size: var(--text-caption);
+  color: var(--color-muted);
+}
+
+.field__error {
+  font-size: var(--text-caption);
+  color: var(--color-error);
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--color-surface-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+}
+
+.card--outline {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+}
+
+/* ---------- 徽标 ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-card);
+  color: var(--color-ink);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.badge--coral {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: var(--text-caption-uppercase);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.badge--error {
+  background: rgba(198, 69, 69, 0.12);
+  color: var(--color-error);
+}
+
+/* ---------- 筛选标签 ---------- */
+.tabs {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.tab {
+  padding: 8px 14px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tab--active {
+  background: var(--color-surface-card);
+  color: var(--color-ink);
+}
+
+/* ---------- 提示条 ---------- */
+.notice {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-body-sm);
+  background: var(--color-surface-soft);
+  color: var(--color-body-strong);
+}
+
+.notice--error {
+  background: rgba(198, 69, 69, 0.1);
+  color: var(--color-error);
+}
+
+.notice--success {
+  background: rgba(93, 184, 114, 0.14);
+  color: #2f6b3f;
+}
+
+/* ---------- 文本工具 ---------- */
+.caption {
+  font-size: var(--text-caption);
+  color: var(--color-muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--color-muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
