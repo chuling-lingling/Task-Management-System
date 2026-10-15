@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
@@ -12,6 +12,11 @@ const email = ref(auth.user?.email ?? '')
 const submitting = ref(false)
 const feedback = ref('')
 const errorMessage = ref('')
+
+const avatarInitial = computed(() => {
+  const name = (auth.displayName || '').trim()
+  return name ? name.charAt(0).toUpperCase() : 'U'
+})
 
 async function handleSave() {
   errorMessage.value = ''
@@ -45,38 +50,46 @@ function goBack() {
     <section class="container settings__panel card">
       <button type="button" class="settings__back" @click="goBack">← 返回任务</button>
 
-      <h1 class="display-md settings__title">账户设置</h1>
-      <p class="settings__lede">
-        设置用于接收任务提醒的邮箱。当任务的「计划执行时间」到达且开启了邮箱提醒，系统会发信到这里。
-      </p>
+      <h1 class="display-md settings__title">个人中心</h1>
 
-      <form class="settings__form" @submit.prevent="handleSave">
-        <div class="field">
-          <label class="field__label" for="settings-email">提醒邮箱（可留空）</label>
-          <input
-            id="settings-email"
-            v-model="email"
-            class="input"
-            type="email"
-            autocomplete="email"
-            placeholder="例如 you@example.com"
-          />
-          <span class="field__hint">发信由系统从你配置的发件域名统一发出，这里填你用来收信的地址。</span>
+      <div class="profile">
+        <div class="profile__avatar" aria-hidden="true">{{ avatarInitial }}</div>
+        <div class="profile__info">
+          <div class="profile__name">{{ auth.displayName || '未命名用户' }}</div>
+          <div class="profile__meta">用户名 · 任务与提醒仅自己可见</div>
         </div>
+      </div>
 
-        <p v-if="feedback" class="notice notice--success">{{ feedback }}</p>
-        <p v-if="errorMessage" class="notice notice--error">{{ errorMessage }}</p>
+      <div class="settings__section">
+        <h2 class="settings__subtitle">提醒邮箱</h2>
+        <p class="settings__lede">
+          当任务的「计划执行时间」到达且开启了邮箱提醒，系统会发信到这里。可留空（留空则不发送）。
+        </p>
 
-        <div class="settings__actions">
-          <button type="submit" class="btn btn--primary" :disabled="submitting">
-            {{ submitting ? '保存中…' : '保存邮箱' }}
-          </button>
-        </div>
-      </form>
+        <form class="settings__form" @submit.prevent="handleSave">
+          <div class="field">
+            <label class="field__label" for="settings-email">邮箱地址</label>
+            <input
+              id="settings-email"
+              v-model="email"
+              class="input"
+              type="email"
+              autocomplete="email"
+              placeholder="例如 you@example.com"
+            />
+            <span class="field__hint">发信由系统从你配置的发件域名统一发出，这里填你用来收信的地址。</span>
+          </div>
 
-      <p class="settings__account">
-        当前登录用户：<strong>{{ auth.displayName }}</strong>
-      </p>
+          <p v-if="feedback" class="notice notice--success">{{ feedback }}</p>
+          <p v-if="errorMessage" class="notice notice--error">{{ errorMessage }}</p>
+
+          <div class="settings__actions">
+            <button type="submit" class="btn btn--primary" :disabled="submitting">
+              {{ submitting ? '保存中…' : '保存邮箱' }}
+            </button>
+          </div>
+        </form>
+      </div>
     </section>
   </main>
 </template>
@@ -112,6 +125,59 @@ function goBack() {
   color: var(--color-ink);
 }
 
+.profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-soft);
+}
+
+.profile__avatar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-dark);
+  color: var(--color-on-dark);
+  font-size: var(--text-title-sm);
+  font-weight: 600;
+}
+
+.profile__info {
+  min-width: 0;
+}
+
+.profile__name {
+  font-size: var(--text-title-sm);
+  font-weight: 500;
+  color: var(--color-ink);
+  word-break: break-all;
+}
+
+.profile__meta {
+  margin-top: var(--space-xxs);
+  font-size: var(--text-caption);
+  color: var(--color-muted);
+}
+
+.settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.settings__subtitle {
+  font-size: var(--text-title-sm);
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
 .settings__lede {
   font-size: var(--text-body-md);
   color: var(--color-body);
@@ -126,12 +192,5 @@ function goBack() {
 
 .settings__actions {
   margin-top: var(--space-xs);
-}
-
-.settings__account {
-  font-size: var(--text-body-sm);
-  color: var(--color-muted);
-  border-top: 1px solid var(--color-hairline);
-  padding-top: var(--space-md);
 }
 </style>

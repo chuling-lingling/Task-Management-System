@@ -21,7 +21,7 @@ function handleLogout() {
         <span class="nav__wordmark">任务管理</span>
       </div>
       <div class="nav__actions">
-        <RouterLink to="/settings" class="nav__user" title="点击进入设置">{{ auth.displayName }}</RouterLink>
+        <RouterLink to="/settings" class="nav__user" title="进入个人中心">个人中心</RouterLink>
         <button type="button" class="btn btn--secondary nav__logout" @click="handleLogout">退出登录</button>
       </div>
     </div>
