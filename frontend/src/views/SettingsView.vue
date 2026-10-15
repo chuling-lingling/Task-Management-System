@@ -59,9 +59,9 @@ function goBack() {
             class="input"
             type="email"
             autocomplete="email"
-            placeholder="例如 you@chulingx.com"
+            placeholder="例如 you@example.com"
           />
-          <span class="field__hint">发信由系统统一从 chulingx.com 域名发出，这里填你收信的地址。</span>
+          <span class="field__hint">发信由系统从你配置的发件域名统一发出，这里填你用来收信的地址。</span>
         </div>
 
         <p v-if="feedback" class="notice notice--success">{{ feedback }}</p>

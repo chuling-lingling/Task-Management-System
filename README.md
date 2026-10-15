@@ -1,22 +1,54 @@
-# 任务管理系统
+<div align="center">
 
-前后端分离的个人任务管理系统。核心链路：**注册登录 → 创建任务 → 按计划执行时间查看未完成列表 → 修改 / 删除 / 标记完成 → 查看最近 30 天已完成的任务**。
+# 🗂️ 任务管理系统 · Task Management System
 
-## 当前进度
+**把要做的事，按计划放好。** 注册登录 → 创建任务 → 按计划时间查看 → 标记完成，到点自动发邮件提醒。
 
-采用分阶段交付，每完成一个模块由人工验收后再进入下一阶段。
+<img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+<img src="https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue 3" />
+<img src="https://img.shields.io/badge/MySQL-8-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL 8" />
+<img src="https://img.shields.io/badge/Docker-一键部署-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+<img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT License" />
 
-| 阶段 | 内容 | 状态 |
-|---|---|---|
-| M1 | 骨架与配置（虚拟环境、目录结构、`.env`、`README`、`AGENTS.md`） | ✅ 已完成 |
-| M2 | 数据层（`users` / `tasks` 表、ORM 模型、建表脚本） | ✅ 已完成 |
-| M3 | 认证模块（注册、登录、JWT 鉴权依赖、Argon2id 密码哈希） | ✅ 已完成 |
-| M4 | 任务接口（增删改查、完成/恢复、筛选排序、越权防护） | ✅ 已完成 |
-| M5 | 前端界面（登录、注册、任务页，视觉依据 `DESIGN.md`） | ✅ 已完成 |
-| M6 | 联调收尾（一键冒烟、错误码、README 定稿、全流程走查） | ✅ 已完成 |
-| M7 | 邮件提醒（设置页收件邮箱、任务勾选提醒、SMTP 发送、后台定时任务） | ✅ 已完成 |
+</div>
 
-第一版功能已全部完成，可在浏览器中完整使用。M7 已加入**邮件提醒**：用户在「设置页」填写收件邮箱，创建/编辑任务时勾选「启用邮箱提醒」，到达计划执行时间后系统自动发信到该邮箱。
+---
+
+前后端分离的个人 / 小团队任务管理系统（**FastAPI + Vue 3 + MySQL 8**）。以「**计划执行时间**」驱动待办排序，支持**邮箱提醒**（只发一次 / 每小时 / 每天），并用 **Docker 一条命令**完成部署。
+
+<p align="center"><img src="docs/screenshots/02-tasks.png" width="720" alt="任务列表主界面" /></p>
+
+## ✨ 功能特性
+
+- 🗂️ **计划驱动** — 用「计划执行时间」给待办排序，先做最该做的；未完成的在前，已完成的自动归档（保留最近 30 天）。
+- ⏰ **邮箱提醒** — 到达计划时间自动发信到你设置的邮箱；频率可选「只发一次 / 每小时一次 / 每天一次」，发送失败会自动重试。
+- 🔐 **安全** — Argon2id 密码哈希、JWT 鉴权、越权防护（别人的任务一律按 404 处理）。
+- 🐳 **一键部署** — 多阶段 Docker 镜像，后端同时托管前端页面，`docker compose up -d` 即可使用。
+- 🎨 **清爽界面** — Vue 3 + 设计令牌，超期高亮、完成态删除线、移动端自适应。
+
+## 📸 界面预览
+
+| 登录 | 新增任务（提醒频率） |
+|:---:|:---:|
+| <img src="docs/screenshots/01-login.png" width="380" alt="登录" /> | <img src="docs/screenshots/03-new-task-form.png" width="380" alt="新增任务" /> |
+
+| 已完成 | 账户设置（提醒邮箱） |
+|:---:|:---:|
+| <img src="docs/screenshots/05-done.png" width="380" alt="已完成" /> | <img src="docs/screenshots/04-settings.png" width="380" alt="账户设置" /> |
+
+## 🚀 快速开始
+
+**Docker（推荐，一条命令）：**
+
+```bash
+git clone https://github.com/chuling-lingling/Task-Management-System.git
+cd Task-Management-System
+cp .env.example .env        # 填写 JWT_SECRET_KEY（openssl rand -hex 32）与 SMTP_*
+docker compose up -d --build
+# 浏览器打开 http://localhost:8000
+```
+
+> 不想用 Docker？下方「本地启动」用于开发，「部署到 Linux 服务器」用于生产裸机部署，两种路径二选一。
 
 ## 技术栈
 
