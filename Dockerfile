@@ -14,13 +14,15 @@ RUN npm run build
 FROM python:3.13-slim AS runtime
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    TZ=Asia/Shanghai
 
 WORKDIR /app
 
 # 仅保留证书等基础包；cryptography / argon2 在 slim 上通常有预编译 wheel
+# tzdata 用于支持 TZ 时区（见下方 ENV TZ）
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/ ./backend/

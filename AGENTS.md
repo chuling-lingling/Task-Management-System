@@ -61,7 +61,7 @@ frontend/src/     api / views / components / stores / router / styles
 2. **完成状态以 `completed_at` 是否为 NULL 为唯一真源**。删除任务表里任何 `is_completed` / `status` 布尔字段的设想，两个字段必然会在某天不一致。
 3. 已完成筛选的时间窗口是**最近 30 天**，比较基准是 `completed_at`，不是 `created_at`。
 4. 未完成任务列表默认排序：**`planned_at` 升序优先，未设置计划时间的排在后面，组内按 `created_at` 倒序**。已完成任务列表按 `completed_at` 倒序。
-5. **时间统一由应用层生成**：所有时间字段用 SQLAlchemy 的 Python 侧默认值（`default=datetime.now`），不使用数据库的 `NOW()`，这样时区行为可预测。服务端与 MySQL 必须处于同一时区，本机部署默认满足；若服务端采用 UTC 容器部署，需先统一时区方案再上线。
+5. **时间统一由应用层生成**：所有时间字段用 SQLAlchemy 的 Python 侧默认值（`default=datetime.now`），不使用数据库的 `NOW()`，这样时区行为可预测。服务端与 MySQL 必须处于同一时区：本机部署默认满足；**Docker 部署时镜像内已装 tzdata，`Dockerfile` 设 `ENV TZ=Asia/Shanghai`，compose 两个服务均可用 `.env` 的 `TZ` 覆盖**——绝不允许容器裸跑 UTC（否则「计划执行时间」到期判断与界面展示都会偏移，东八区用户会晚 8 小时）。
 6. 索引约定：列表查询永远带 `user_id` 维度，因此 `tasks` 只需 `(user_id, completed_at)` 复合索引即可覆盖"未完成过滤"与"最近 30 天已完成筛选"两种场景，不要重复给单个字段加索引。
 7. **邮箱提醒用 `email_reminder_sent_at` 是否为 NULL 作为"是否已成功发送"的唯一真源**，与 `completed_at` 同理：由服务端在发送成功后写入，前端不可伪造；修改 `planned_at` 或 `email_reminder_mode` 时重置它与 `email_reminder_failed_at`，使提醒按新时间/新频率重新计时。频率模式 `email_reminder_mode`（`once`/`hourly`/`daily`，默认 `once`）：`once` 只发一次，`hourly`/`daily` 在首次发送后每隔 1 小时/1 天持续发送直到任务完成。失败不标记 `sent_at`，只记 `failed_at` 并加 5 分钟退避重试（SMTP 恢复后自动补发）。
 

@@ -359,6 +359,7 @@ docker compose up -d --build
 ```
 
 - 镜像用多阶段构建：先 `node:22-slim` 构建前端，再 `python:3.13-slim` 运行后端，前端静态文件直接打进后端镜像，所以**不需要额外 nginx 伺候前端**。
+- ⚠️ **时区**：容器默认 `TZ=Asia/Shanghai`（北京时间），「计划执行时间」的到期判断以此为基准。服务器在海外可在 `.env` 设 `TZ=其他时区` 覆盖；用 `docker compose exec backend date` 可查看容器当前时间——**如果显示 UTC 而你是东八区，任务会到晚 8 小时才到期**。
 - 后端容器启动时会先幂等建表（`scripts/init_db.py`）再启动 uvicorn；MySQL 通过 `depends_on + healthcheck` 确保就绪后才连。
 - 数据落在名为 `db_data` 的卷里，容器重建不丢；删库重来：`docker compose down -v`。
 - 想绑域名 + HTTPS：把 `.env` 的 `FRONTEND_URL`、`CORS_ORIGINS` 改成你的域名，再用 nginx/caddy 在宿主机反代 `localhost:8000` 并申请证书即可（后端本身无需改动）。
@@ -633,6 +634,7 @@ python scripts/send_reminders.py
 | 登录后过几天又跳回登录页 | 令牌默认 7 天过期，改 `.env` 的 `JWT_EXPIRE_DAYS` |
 | 前端改了后端地址 | 开发期走 `frontend/vite.config.js` 的 `/api` 代理，改那里的 `target` |
 | 收不到提醒邮件 | 先确认 `.env` 的 `SMTP_HOST/USER/PASSWORD` 都填了（未填则发信被跳过只写日志）；再确认用户在「个人中心」填了收件邮箱、对应任务勾选了「启用邮箱提醒」、计划时间已到。最后看后端日志是否有「发送提醒邮件失败」及具体异常 |
+| Docker 部署时邮件总是不来 / 任务不提醒 | 九成是**时区**：`docker compose exec backend date` 若显示 UTC 而你是东八区，任务会晚 8 小时才到期。修复：镜像已内置 `TZ=Asia/Shanghai`，确认 `.env` 未把 `TZ` 改成其他值，`docker compose up -d` 重建容器 |
 | 提醒邮件进了垃圾箱 | 用自有域名发件时必须在 DNS 配 SPF/DKIM/DMARC，且 `SMTP_USER` 须为该域名下已配置的邮箱，否则被收件方判为伪造。详见「邮件提醒」章节 |
 
 ## 后续规划（本期未实现）

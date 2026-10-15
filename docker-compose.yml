@@ -9,6 +9,10 @@
 # Compose 会自动读取项目根目录的 .env 做变量替换；后端容器内的 DB 连接由下面的
 # environment 覆盖为 compose 网络内的服务名(db)与账号(taskapp)，因此 .env 里的
 # MYSQL_HOST/MYSQL_USER/MYSQL_PASSWORD 在容器内部不生效，无需改动。
+#
+# 时区说明：容器默认 TZ=Asia/Shanghai（北京时间）。datetime.now() 以此为基准，
+# 直接影响「计划执行时间」的到期判断与界面时间展示；服务器在海外可在 .env 设
+# TZ=其他时区（如 America/New_York）覆盖，改后需 docker compose up -d 重建生效。
 
 services:
   db:
@@ -20,6 +24,7 @@ services:
       MYSQL_DATABASE: task_system
       MYSQL_USER: taskapp
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme_db}
+      TZ: ${TZ:-Asia/Shanghai}
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -46,6 +51,7 @@ services:
       APP_ENV: production
       APP_HOST: 0.0.0.0
       APP_PORT: 8000
+      TZ: ${TZ:-Asia/Shanghai}
       ENABLE_REMINDER_WORKER: "true"
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8000}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
