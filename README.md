@@ -133,7 +133,7 @@ cp .env.example .env
 | `JWT_SECRET_KEY` | JWT 签名密钥，生产环境务必替换为随机值 |
 | `CORS_ORIGINS` | 允许的前端来源，逗号分隔 |
 | `SMTP_HOST` / `SMTP_PORT` | 发件 SMTP 服务器地址与端口（SSL 常用 465） |
-| `SMTP_USER` / `SMTP_PASSWORD` | 发件账号与授权码（用你的域名邮箱，如 `noreply@chulingx.com`） |
+| `SMTP_USER` / `SMTP_PASSWORD` | 发件账号与授权码（用你的域名邮箱，如 `noreply@你的域名`） |
 | `SMTP_FROM_NAME` | 收件人看到的发件人显示名 |
 | `SMTP_USE_SSL` | `true` 走 SSL（465），`false` 走 STARTTLS（587） |
 | `FRONTEND_URL` | 提醒邮件正文里指向的前端地址 |
@@ -345,7 +345,7 @@ sudo systemctl restart task-system
 
 ## 用 Docker 一键部署（推荐）
 
-不想装 Python/Node/MySQL 环境，直接一条命令起整套（MySQL 8 + 后端，后端同时托管前端页面）：
+不想装 Python/Node/MySQL 环境，直接一条命令起整套。**数据库也自动包含在内**：compose 会拉起一个 MySQL 8 容器（数据持久化到 `db_data` 卷），后端首次启动自动建表，无需单独安装/配置 MySQL。同时后端直接托管前端页面：
 
 ```bash
 # 1. 准备环境配置（JWT 密钥、SMTP 等；DB 账号由 compose 管理，不用改）
@@ -509,7 +509,7 @@ frontend/src/
 
 **两个邮箱角色（关键区分）**
 - **收件邮箱**：用户在设置页填写，存 `users.email`，是提醒的投递目标，可为空（空则不发）。
-- **发件账号**：系统级统一发件人，凭据来自 `.env` 的 `SMTP_*`，**只在服务端**，不进代码/库。本机示例用你的域名邮箱（如 `noreply@chulingx.com`）。
+- **发件账号**：系统级统一发件人，凭据来自 `.env` 的 `SMTP_*`，**只在服务端**，不进代码/库。例如 `noreply@你的域名`。
 
 **触发机制**
 - 应用启动时起一个 asyncio 后台定时任务（默认每 60 秒，见 `REMINDER_INTERVAL_SECONDS`），扫描**同时满足**以下条件的任务并发送：
@@ -524,9 +524,9 @@ frontend/src/
 - 修改任务的 `planned_at` **或** `email_reminder_mode` 会重置 `email_reminder_sent_at` 与 `email_reminder_failed_at`，使提醒按新的时间/频率重新计时。
 - 独立脚本 `scripts/send_reminders.py` 与内置后台任务**二选一**：关闭 `ENABLE_REMINDER_WORKER` 时，用 cron / 任务计划程序周期性调用它（适合多 worker 部署，避免重复发送）。
 
-**用自有域名 chulingx.com 发件（重要）**
-- 在 `.env` 把 `SMTP_USER` 填为该域名下**已开通 SMTP** 的邮箱（如 `noreply@chulingx.com`），`SMTP_HOST` / `SMTP_PORT` / `SMTP_PASSWORD` 填你的邮件服务商提供的 SMTP 信息；`SMTP_USE_SSL` 按端口填（`true`=465 SSL，`false`=587 STARTTLS）。
-- 必须在 **chulingx.com 的 DNS** 配置 **SPF、DKIM、DMARC** 记录（指向你的邮件服务商）。否则收件方（Gmail / QQ / 163 等）会把邮件判为伪造或垃圾邮件，甚至直接拒收。这是域名发件能被正常送达的前提，**与代码实现无关**。
+**用自有域名发件（重要）**
+- 在 `.env` 把 `SMTP_USER` 填为该域名下**已开通 SMTP** 的邮箱（如 `noreply@你的域名`），`SMTP_HOST` / `SMTP_PORT` / `SMTP_PASSWORD` 填你的邮件服务商提供的 SMTP 信息；`SMTP_USE_SSL` 按端口填（`true`=465 SSL，`false`=587 STARTTLS）。
+- 必须在**你的域名的 DNS** 配置 **SPF、DKIM、DMARC** 记录（指向你的邮件服务商）。否则收件方（Gmail / QQ / 163 等）会把邮件判为伪造或垃圾邮件，甚至直接拒收。这是域名发件能被正常送达的前提，**与代码实现无关**。
 - `SMTP_FROM_NAME` 只是收件人看到的发件人昵称，可与 `SMTP_USER` 不同。
 
 **手动验证发送**
@@ -537,6 +537,44 @@ python scripts/send_reminders.py
 ```
 
 - 正常会打印「发送提醒邮件 N 封」，后端日志出现「提醒邮件已发往 …」；失败则日志出现「发送提醒邮件失败 …」及具体异常（凭据错误 / 网络不通 / DNS 解析失败等）。
+
+## 邮件服务商选择（SMTP）
+
+系统通过标准 SMTP 发信，`.env` 里配好 `SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_FROM_ADDRESS` 即可，**不限定服务商**。不想自己搭邮件服务器，用第三方事务邮件服务最省心。
+
+### 推荐：Resend（有免费额度，https://resend.com/）
+
+[Resend](https://resend.com/) 是面向开发者的事务邮件服务，同时提供 **SMTP 中继**与 **API**，自带 SPF / DKIM / DMARC 域名校验，接入简单。
+
+- **免费额度**：**3,000 封 / 月 · 100 封 / 天**，最多 3 个自定义域名、3 个收件箱、30 天日志留存，含 1 个 Webhook。对个人 / 小项目的任务提醒完全够用。
+- **付费升级**：Pro $20/月 = 50,000 封/月且**无每日上限**；Scale $90/月 = 100,000 封/月。
+- **配置步骤**：
+  1. Resend 控制台 **添加并验证你的域名**（按提示在该域名 DNS 加 Resend 提供的 DKIM / SPF 记录，通常在 Cloudflare 里加，保持 DNS only）。
+  2. 创建 **API Key**（至少 `Sending` 权限），形如 `re_xxxxxxxx`。
+  3. 填入 `.env`：
+     ```env
+     SMTP_HOST=smtp.resend.com
+     SMTP_PORT=465
+     SMTP_USE_SSL=true
+     SMTP_USER=resend
+     SMTP_PASSWORD=re_xxxxxxxx
+     SMTP_FROM_ADDRESS=noreply@你的域名
+     SMTP_FROM_NAME=任务管理系统
+     ```
+     > 关键点：Resend 的 SMTP **登录用户名固定是 `resend`**（不是邮箱），密码填 API Key；`SMTP_FROM_ADDRESS` 必须是**已在 Resend 验证的域名下的地址**，否则报 `550 Domain not verified`。这正是本项目把「SMTP 登录名」与「发件 From 地址」拆成两个配置项的原因。
+- **国内服务器提示**：国内机器连 `smtp.resend.com` 可能延迟偏高或不稳定，需放行出站 465 端口；若不通，可改用下表国内服务商。
+
+### 其他可选服务商
+
+| 服务商 | 免费额度（参考，以官网为准） | 备注 |
+|---|---|---|
+| **Resend** | 3,000 封/月 · 100 封/天 | 开发者友好，SMTP + API，**推荐** |
+| Brevo | ~300 封/天 | 含营销邮件，SMTP + API |
+| Mailjet | ~6,000 封/月 · 200 封/天 | 老牌，SMTP + API |
+| 阿里云邮件推送 | 免费 2,000 封/日（有单日上限） | 国内直达、送达稳定，适合国内服务器 |
+| Amazon SES | 按量约 $0.10 / 千封 | 需 AWS 账号，量大划算 |
+
+> 无论选哪家，**用自己的域名发件都要在该域名 DNS 配 SPF / DKIM / DMARC**，否则容易进垃圾箱（详见上文「邮件提醒」）。不想用域名也可用服务商提供的测试/共享发件地址先跑通，但送达率与稳定性不如自有域名。
 
 ## 数据表
 
@@ -595,7 +633,7 @@ python scripts/send_reminders.py
 | 登录后过几天又跳回登录页 | 令牌默认 7 天过期，改 `.env` 的 `JWT_EXPIRE_DAYS` |
 | 前端改了后端地址 | 开发期走 `frontend/vite.config.js` 的 `/api` 代理，改那里的 `target` |
 | 收不到提醒邮件 | 先确认 `.env` 的 `SMTP_HOST/USER/PASSWORD` 都填了（未填则发信被跳过只写日志）；再确认用户在「设置页」填了收件邮箱、对应任务勾选了「启用邮箱提醒」、计划时间已到。最后看后端日志是否有「发送提醒邮件失败」及具体异常 |
-| 提醒邮件进了垃圾箱 | 用自有域名（如 chulingx.com）发件时必须在 DNS 配 SPF/DKIM/DMARC，且 `SMTP_USER` 须为该域名下已配置的邮箱，否则被收件方判为伪造。详见「邮件提醒」章节 |
+| 提醒邮件进了垃圾箱 | 用自有域名发件时必须在 DNS 配 SPF/DKIM/DMARC，且 `SMTP_USER` 须为该域名下已配置的邮箱，否则被收件方判为伪造。详见「邮件提醒」章节 |
 
 ## 后续规划（本期未实现）
 
