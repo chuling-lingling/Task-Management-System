@@ -364,6 +364,13 @@ docker compose up -d --build
 - 镜像用多阶段构建：先 `node:22-slim` 构建前端，再 `python:3.13-slim` 运行后端，前端静态文件直接打进后端镜像，所以**不需要额外 nginx 伺候前端**。
 - ⚠️ **时区**：容器默认 `TZ=Asia/Shanghai`（北京时间），「计划执行时间」的到期判断以此为基准。服务器在海外可在 `.env` 设 `TZ=其他时区` 覆盖；用 `docker compose exec backend date` 可查看容器当前时间——**如果显示 UTC 而你是东八区，任务会到晚 8 小时才到期**。
 - ⚠️ **改访问端口**：编辑 `.env` 设 `HOST_PORT=8070`（容器内固定 8000 不用动），再 `docker compose up -d`。**不要直接改 compose 里的 `ports`**——改文件会导致 `git pull` 冲突，用 `.env` 配置则永远顺滑。
+- 🐢 **国内服务器首次构建慢**（apt/pip/npm 官方源，可能 10 分钟+）：在 `.env` 配置换源即可，不配则用官方源：
+  ```bash
+  # 腾讯云示例（阿里云把 tencent 换成 aliyun，见 .env.example 注释）
+  APT_MIRROR=mirrors.tencent.com
+  PIP_INDEX_URL=https://mirrors.cloud.tencent.com/pypi/simple
+  NPM_REGISTRY=https://mirrors.cloud.tencent.com/npm/
+  ```
 - 后端容器启动时会先幂等建表（`scripts/init_db.py`）再启动 uvicorn；MySQL 通过 `depends_on + healthcheck` 确保就绪后才连。
 - 数据落在名为 `db_data` 的卷里，容器重建不丢；删库重来：`docker compose down -v`。
 - 想绑域名 + HTTPS：把 `.env` 的 `FRONTEND_URL`、`CORS_ORIGINS` 改成你的域名，再用 nginx/caddy 在宿主机反代 `localhost:8000` 并申请证书即可（后端本身无需改动）。
