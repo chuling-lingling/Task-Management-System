@@ -302,6 +302,29 @@ sudo systemctl restart task-system
 
 应用启动时会自动补齐新增列（自愈式迁移），无需手动改表。
 
+## 用 Docker 一键部署（推荐）
+
+不想装 Python/Node/MySQL 环境，直接一条命令起整套（MySQL 8 + 后端，后端同时托管前端页面）：
+
+```bash
+# 1. 准备环境配置（JWT 密钥、SMTP 等；DB 账号由 compose 管理，不用改）
+cp .env.example .env
+# 编辑 .env：填 JWT_SECRET_KEY（openssl rand -hex 32）与 SMTP_*，可选填 FRONTEND_URL/CORS_ORIGINS
+
+# 2. 一键拉起（首次会构建镜像，稍等片刻）
+docker compose up -d --build
+
+# 3. 访问 http://localhost:8000
+```
+
+- 镜像用多阶段构建：先 `node:22-slim` 构建前端，再 `python:3.13-slim` 运行后端，前端静态文件直接打进后端镜像，所以**不需要额外 nginx 伺候前端**。
+- 后端容器启动时会先幂等建表（`scripts/init_db.py`）再启动 uvicorn；MySQL 通过 `depends_on + healthcheck` 确保就绪后才连。
+- 数据落在名为 `db_data` 的卷里，容器重建不丢；删库重来：`docker compose down -v`。
+- 想绑域名 + HTTPS：把 `.env` 的 `FRONTEND_URL`、`CORS_ORIGINS` 改成你的域名，再用 nginx/caddy 在宿主机反代 `localhost:8000` 并申请证书即可（后端本身无需改动）。
+- 看日志：`docker compose logs -f backend`。
+
+> 若宿主机已有 MySQL 或想拆开部署，仍可走上一节「部署到 Linux 服务器」的手动方式；Docker 与手动两种路径二选一。
+
 ## 验收方法
 
 ### M1 骨架与配置

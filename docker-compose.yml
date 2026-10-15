@@ -1,0 +1,62 @@
+# 一键部署：docker compose up -d --build
+# 默认会拉起 MySQL 8 + 后端（后端同时托管前端静态页面），访问 http://localhost:8000 即可使用。
+#
+# 使用前（重要）：
+#   1. cp .env.example .env  并填写 JWT_SECRET_KEY（openssl rand -hex 32）与 SMTP_* 等
+#   2. 可选：在 .env 里设置 MYSQL_ROOT_PASSWORD / MYSQL_PASSWORD 覆盖下面的默认值
+#   3. 想绑域名/HTTPS：把 .env 的 FRONTEND_URL、CORS_ORIGINS 改成你的域名
+#
+# Compose 会自动读取项目根目录的 .env 做变量替换；后端容器内的 DB 连接由下面的
+# environment 覆盖为 compose 网络内的服务名(db)与账号(taskapp)，因此 .env 里的
+# MYSQL_HOST/MYSQL_USER/MYSQL_PASSWORD 在容器内部不生效，无需改动。
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: task-system-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme_root}
+      MYSQL_DATABASE: task_system
+      MYSQL_USER: taskapp
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme_db}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${MYSQL_PASSWORD:-changeme_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  backend:
+    build: .
+    container_name: task-system-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      # —— 以下在容器网络内覆盖 .env 的本地值 ——
+      MYSQL_HOST: db
+      MYSQL_USER: taskapp
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme_db}
+      MYSQL_DB: task_system
+      APP_ENV: production
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      ENABLE_REMINDER_WORKER: "true"
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  db_data:
