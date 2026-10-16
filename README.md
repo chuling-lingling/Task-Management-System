@@ -49,6 +49,8 @@
 
 **Docker（推荐，一条命令）：**
 
+安装过程最好开启绕过大陆的代理，不然中间有部分依赖大陆下载特别慢，如果环境问题解决不了可以联系我寻找解决方法。QQ：3961898248@qq.com
+
 ```bash
 git clone https://github.com/chuling-lingling/Task-Management-System.git
 cd Task-Management-System
@@ -63,7 +65,7 @@ docker compose up -d --build
 
 后端：FastAPI 0.116 · Uvicorn · SQLAlchemy 2.0 · PyMySQL · Pydantic v2 · PyJWT · Argon2id
 数据库：MySQL 8
-前端（M5 起）：Vue 3 + Vite + Pinia + Axios
+前端（M6 起）：Vue 3 + Vite + Pinia + Axios
 
 ## 目录结构
 
@@ -80,7 +82,7 @@ task-system/
 │   ├── schemas/            Pydantic 入参出参
 │   ├── services/           email（SMTP 发送）/ reminder（到期扫描）
 │   └── api/                deps（鉴权依赖）、v1/（按资源拆分路由）
-├── frontend/               M5 起启用
+├── frontend/               M6 起启用
 ├── scripts/                init_db.py / send_reminders.py / migrate_email.py / smoke*.py
 ```
 
@@ -156,7 +158,7 @@ python scripts/init_db.py
 
 脚本会自动创建 `MYSQL_DB` 指定的数据库（需要 CREATE DATABASE 权限），再建 `users` 和 `tasks` 两张表，建完还会逐表做一次探测查询。
 
-已存在的表不会被改动。后续新增的字段（如 M7 的邮箱与提醒列）由应用**启动时自动补齐**：`app/db/migrate.py` 的 `ensure_email_columns()` 会查询 `information_schema`，缺列才 `ALTER TABLE` 补上，可重复执行、幂等。也可手动跑 `python scripts/migrate_email.py`。
+已存在的表不会被改动。后续新增的字段（如 M2 的邮箱与提醒列）由应用**启动时自动补齐**：`app/db/migrate.py` 的 `ensure_email_columns()` 会查询 `information_schema`，缺列才 `ALTER TABLE` 补上，可重复执行、幂等。也可手动跑 `python scripts/migrate_email.py`。
 
 ### 5. 启动后端
 
@@ -386,7 +388,84 @@ docker compose up -d --build
 2. 浏览器打开 <http://127.0.0.1:8000/docs> 能看到 Swagger 文档
 3. 虚拟环境可激活，且 `pip list` 中能看到 fastapi、sqlalchemy、pymysql、PyJWT、argon2-cffi
 
-### M2 数据层
+### M2 邮件提醒
+
+到达任务的「计划执行时间」时，自动发一封纯文本提醒邮件到用户在个人中心填写的收件邮箱。
+
+**交互入口**
+- 顶栏「个人中心」入口：点击进入「个人中心」（路由 `/settings`），展示用户名，并用于填写/修改收件邮箱。
+- 新建/编辑任务：在「计划执行时间」下方有一个「启用邮箱提醒」勾选框。
+
+**两个邮箱角色（关键区分）**
+- **收件邮箱**：用户在个人中心填写，存 `users.email`，是提醒的投递目标，可为空（空则不发）。
+- **发件账号**：系统级统一发件人，凭据来自 `.env` 的 `SMTP_*`，**只在服务端**，不进代码/库。例如 `noreply@你的域名`。
+
+**触发机制**
+- 应用启动时起一个 asyncio 后台定时任务（默认每 60 秒，见 `REMINDER_INTERVAL_SECONDS`），扫描**同时满足**以下条件的任务并发送：
+  1. `email_reminder_enabled = true`
+  2. `completed_at IS NULL`（未完成任务）
+  3. `planned_at` 不为空且 `<= 当前时间`
+- **提醒频率**（`email_reminder_mode`，创建/编辑任务时选择，默认 `once`）：
+  - `once`：**只发一次**——首次到达计划时间发送后不再发（以 `email_reminder_sent_at` 为防重复真源）。
+  - `hourly`：**每小时发一次**——首次发送后，每满 1 小时再发，直到任务被标记完成。
+  - `daily`：**每天发一次**——首次发送后，每满 1 天再发，持续不断直到任务完成。
+- **失败重试**：只有**发送成功**才写回 `email_reminder_sent_at`；失败只记录 `email_reminder_failed_at` 并加 **5 分钟退避**（距上次失败不足 5 分钟不重试），SMTP 故障恢复后会自动补发，同时避免反复轰炸。
+- 修改任务的 `planned_at` **或** `email_reminder_mode` 会重置 `email_reminder_sent_at` 与 `email_reminder_failed_at`，使提醒按新的时间/频率重新计时。
+- 独立脚本 `scripts/send_reminders.py` 与内置后台任务**二选一**：关闭 `ENABLE_REMINDER_WORKER` 时，用 cron / 任务计划程序周期性调用它（适合多 worker 部署，避免重复发送）。
+
+**用自有域名发件（重要）**
+- 在 `.env` 把 `SMTP_USER` 填为该域名下**已开通 SMTP** 的邮箱（如 `noreply@你的域名`），`SMTP_HOST` / `SMTP_PORT` / `SMTP_PASSWORD` 填你的邮件服务商提供的 SMTP 信息；`SMTP_USE_SSL` 按端口填（`true`=465 SSL，`false`=587 STARTTLS）。
+- 必须在**你的域名的 DNS** 配置 **SPF、DKIM、DMARC** 记录（指向你的邮件服务商）。否则收件方（Gmail / QQ / 163 等）会把邮件判为伪造或垃圾邮件，甚至直接拒收。这是域名发件能被正常送达的前提，**与代码实现无关**。
+- `SMTP_FROM_NAME` 只是收件人看到的发件人昵称，可与 `SMTP_USER` 不同。
+
+**手动验证发送**
+- 确保某个任务已勾选提醒、计划时间设在过去、对应用户已在个人中心填好收件邮箱，然后跑：
+
+```bash
+python scripts/send_reminders.py
+```
+
+- 正常会打印「发送提醒邮件 N 封」，后端日志出现「提醒邮件已发往 …」；失败则日志出现「发送提醒邮件失败 …」及具体异常（凭据错误 / 网络不通 / DNS 解析失败等）。
+
+### 邮件服务商选择（SMTP）
+
+系统通过标准 SMTP 发信，`.env` 里配好 `SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_FROM_ADDRESS` 即可，**不限定服务商**。不想自己搭邮件服务器，用第三方事务邮件服务最省心。
+
+#### 推荐：Resend（有免费额度，https://resend.com/）
+
+[Resend](https://resend.com/) 是面向开发者的事务邮件服务，同时提供 **SMTP 中继**与 **API**，自带 SPF / DKIM / DMARC 域名校验，接入简单。
+
+- **免费额度**：**3,000 封 / 月 · 100 封 / 天**，最多 3 个自定义域名、3 个收件箱、30 天日志留存，含 1 个 Webhook。对个人 / 小项目的任务提醒完全够用。
+- **付费升级**：Pro $20/月 = 50,000 封/月且**无每日上限**；Scale $90/月 = 100,000 封/月。
+- **配置步骤**：
+  1. Resend 控制台 **添加并验证你的域名**（按提示在该域名 DNS 加 Resend 提供的 DKIM / SPF 记录，通常在 Cloudflare 里加，保持 DNS only）。
+  2. 创建 **API Key**（至少 `Sending` 权限），形如 `re_xxxxxxxx`。
+  3. 填入 `.env`：
+     ```env
+     SMTP_HOST=smtp.resend.com
+     SMTP_PORT=465
+     SMTP_USE_SSL=true
+     SMTP_USER=resend
+     SMTP_PASSWORD=re_xxxxxxxx
+     SMTP_FROM_ADDRESS=noreply@你的域名
+     SMTP_FROM_NAME=任务管理系统
+     ```
+     > 关键点：Resend 的 SMTP **登录用户名固定是 `resend`**（不是邮箱），密码填 API Key；`SMTP_FROM_ADDRESS` 必须是**已在 Resend 验证的域名下的地址**，否则报 `550 Domain not verified`。这正是本项目把「SMTP 登录名」与「发件 From 地址」拆成两个配置项的原因。
+- **国内服务器提示**：国内机器连 `smtp.resend.com` 可能延迟偏高或不稳定，需放行出站 465 端口；若不通，可改用下表国内服务商。
+
+#### 其他可选服务商
+
+| 服务商 | 免费额度（参考，以官网为准） | 备注 |
+|---|---|---|
+| **Resend** | 3,000 封/月 · 100 封/天 | 开发者友好，SMTP + API，**推荐** |
+| Brevo | ~300 封/天 | 含营销邮件，SMTP + API |
+| Mailjet | ~6,000 封/月 · 200 封/天 | 老牌，SMTP + API |
+| 阿里云邮件推送 | 免费 2,000 封/日（有单日上限） | 国内直达、送达稳定，适合国内服务器 |
+| Amazon SES | 按量约 $0.10 / 千封 | 需 AWS 账号，量大划算 |
+
+> 无论选哪家，**用自己的域名发件都要在该域名 DNS 配 SPF / DKIM / DMARC**，否则容易进垃圾箱（详见上文「邮件提醒」）。不想用域名也可用服务商提供的测试/共享发件地址先跑通，但送达率与稳定性不如自有域名。
+
+### M3 数据层
 
 1. `python scripts/init_db.py` 输出"全部表可读，初始化成功"
 2. 在 MySQL 客户端执行以下命令，两张表的字段应与预期一致：
@@ -400,7 +479,7 @@ SHOW INDEX FROM tasks;
 
 预期结果：`tasks` 存在 `(user_id, completed_at)` 复合索引、`user_id` 外键指向 `users.id`；`users.username` 唯一。
 
-### M3 认证模块
+### M4 认证模块
 
 后端启动后执行：
 
@@ -414,7 +493,7 @@ python scripts/smoke_auth.py
 
 也可以在 Swagger 里手动点：先调 `/api/v1/auth/register`，再调 `/api/v1/auth/login` 拿到 `access_token`，点右上角 Authorize 填入后调 `/api/v1/auth/me`。
 
-### M4 任务模块
+### M5 任务模块
 
 后端启动后执行：
 
@@ -429,7 +508,7 @@ python scripts/smoke_tasks.py
 
 期望输出：`通过 47 项，失败 0 项`。
 
-### M5 前端界面
+### M6 前端界面
 
 前后端都启动后，浏览器打开 <http://localhost:5173>，按下面顺序操作：
 
@@ -511,83 +590,6 @@ frontend/src/
 
 **时间精度**：MySQL `DATETIME` 默认精度到秒，同一秒内连续更新时 `updated_at` 看起来不变，这是预期行为。
 
-## 邮件提醒（M7）
-
-到达任务的「计划执行时间」时，自动发一封纯文本提醒邮件到用户在个人中心填写的收件邮箱。
-
-**交互入口**
-- 顶栏「个人中心」入口：点击进入「个人中心」（路由 `/settings`），展示用户名，并用于填写/修改收件邮箱。
-- 新建/编辑任务：在「计划执行时间」下方有一个「启用邮箱提醒」勾选框。
-
-**两个邮箱角色（关键区分）**
-- **收件邮箱**：用户在个人中心填写，存 `users.email`，是提醒的投递目标，可为空（空则不发）。
-- **发件账号**：系统级统一发件人，凭据来自 `.env` 的 `SMTP_*`，**只在服务端**，不进代码/库。例如 `noreply@你的域名`。
-
-**触发机制**
-- 应用启动时起一个 asyncio 后台定时任务（默认每 60 秒，见 `REMINDER_INTERVAL_SECONDS`），扫描**同时满足**以下条件的任务并发送：
-  1. `email_reminder_enabled = true`
-  2. `completed_at IS NULL`（未完成任务）
-  3. `planned_at` 不为空且 `<= 当前时间`
-- **提醒频率**（`email_reminder_mode`，创建/编辑任务时选择，默认 `once`）：
-  - `once`：**只发一次**——首次到达计划时间发送后不再发（以 `email_reminder_sent_at` 为防重复真源）。
-  - `hourly`：**每小时发一次**——首次发送后，每满 1 小时再发，直到任务被标记完成。
-  - `daily`：**每天发一次**——首次发送后，每满 1 天再发，持续不断直到任务完成。
-- **失败重试**：只有**发送成功**才写回 `email_reminder_sent_at`；失败只记录 `email_reminder_failed_at` 并加 **5 分钟退避**（距上次失败不足 5 分钟不重试），SMTP 故障恢复后会自动补发，同时避免反复轰炸。
-- 修改任务的 `planned_at` **或** `email_reminder_mode` 会重置 `email_reminder_sent_at` 与 `email_reminder_failed_at`，使提醒按新的时间/频率重新计时。
-- 独立脚本 `scripts/send_reminders.py` 与内置后台任务**二选一**：关闭 `ENABLE_REMINDER_WORKER` 时，用 cron / 任务计划程序周期性调用它（适合多 worker 部署，避免重复发送）。
-
-**用自有域名发件（重要）**
-- 在 `.env` 把 `SMTP_USER` 填为该域名下**已开通 SMTP** 的邮箱（如 `noreply@你的域名`），`SMTP_HOST` / `SMTP_PORT` / `SMTP_PASSWORD` 填你的邮件服务商提供的 SMTP 信息；`SMTP_USE_SSL` 按端口填（`true`=465 SSL，`false`=587 STARTTLS）。
-- 必须在**你的域名的 DNS** 配置 **SPF、DKIM、DMARC** 记录（指向你的邮件服务商）。否则收件方（Gmail / QQ / 163 等）会把邮件判为伪造或垃圾邮件，甚至直接拒收。这是域名发件能被正常送达的前提，**与代码实现无关**。
-- `SMTP_FROM_NAME` 只是收件人看到的发件人昵称，可与 `SMTP_USER` 不同。
-
-**手动验证发送**
-- 确保某个任务已勾选提醒、计划时间设在过去、对应用户已在个人中心填好收件邮箱，然后跑：
-
-```bash
-python scripts/send_reminders.py
-```
-
-- 正常会打印「发送提醒邮件 N 封」，后端日志出现「提醒邮件已发往 …」；失败则日志出现「发送提醒邮件失败 …」及具体异常（凭据错误 / 网络不通 / DNS 解析失败等）。
-
-## 邮件服务商选择（SMTP）
-
-系统通过标准 SMTP 发信，`.env` 里配好 `SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_FROM_ADDRESS` 即可，**不限定服务商**。不想自己搭邮件服务器，用第三方事务邮件服务最省心。
-
-### 推荐：Resend（有免费额度，https://resend.com/）
-
-[Resend](https://resend.com/) 是面向开发者的事务邮件服务，同时提供 **SMTP 中继**与 **API**，自带 SPF / DKIM / DMARC 域名校验，接入简单。
-
-- **免费额度**：**3,000 封 / 月 · 100 封 / 天**，最多 3 个自定义域名、3 个收件箱、30 天日志留存，含 1 个 Webhook。对个人 / 小项目的任务提醒完全够用。
-- **付费升级**：Pro $20/月 = 50,000 封/月且**无每日上限**；Scale $90/月 = 100,000 封/月。
-- **配置步骤**：
-  1. Resend 控制台 **添加并验证你的域名**（按提示在该域名 DNS 加 Resend 提供的 DKIM / SPF 记录，通常在 Cloudflare 里加，保持 DNS only）。
-  2. 创建 **API Key**（至少 `Sending` 权限），形如 `re_xxxxxxxx`。
-  3. 填入 `.env`：
-     ```env
-     SMTP_HOST=smtp.resend.com
-     SMTP_PORT=465
-     SMTP_USE_SSL=true
-     SMTP_USER=resend
-     SMTP_PASSWORD=re_xxxxxxxx
-     SMTP_FROM_ADDRESS=noreply@你的域名
-     SMTP_FROM_NAME=任务管理系统
-     ```
-     > 关键点：Resend 的 SMTP **登录用户名固定是 `resend`**（不是邮箱），密码填 API Key；`SMTP_FROM_ADDRESS` 必须是**已在 Resend 验证的域名下的地址**，否则报 `550 Domain not verified`。这正是本项目把「SMTP 登录名」与「发件 From 地址」拆成两个配置项的原因。
-- **国内服务器提示**：国内机器连 `smtp.resend.com` 可能延迟偏高或不稳定，需放行出站 465 端口；若不通，可改用下表国内服务商。
-
-### 其他可选服务商
-
-| 服务商 | 免费额度（参考，以官网为准） | 备注 |
-|---|---|---|
-| **Resend** | 3,000 封/月 · 100 封/天 | 开发者友好，SMTP + API，**推荐** |
-| Brevo | ~300 封/天 | 含营销邮件，SMTP + API |
-| Mailjet | ~6,000 封/月 · 200 封/天 | 老牌，SMTP + API |
-| 阿里云邮件推送 | 免费 2,000 封/日（有单日上限） | 国内直达、送达稳定，适合国内服务器 |
-| Amazon SES | 按量约 $0.10 / 千封 | 需 AWS 账号，量大划算 |
-
-> 无论选哪家，**用自己的域名发件都要在该域名 DNS 配 SPF / DKIM / DMARC**，否则容易进垃圾箱（详见上文「邮件提醒」）。不想用域名也可用服务商提供的测试/共享发件地址先跑通，但送达率与稳定性不如自有域名。
-
 ## 数据表
 
 ### users
@@ -655,8 +657,12 @@ python scripts/send_reminders.py
 - 迁移工具：当前用启动时自愈式 `ALTER`（见「初始化数据库」），长期迭代可平滑迁移到 Alembic。
 - 邮件重试与退信：当前提醒为尽力发送，失败即标记已处理不再重试；后续可加失败队列与退信处理。
 
-## M6 收尾验收
+## M7 收尾验收
 
 1. `python scripts/smoke.py` 输出「全部模块冒烟通过」（认证 25 项 + 任务 47 项）。
 2. 前后端同时运行，登录后在界面上完整走一遍：创建 → 排序查看 → 编辑 → 标记完成 → 在已完成标签里查看 → 恢复 → 删除 → 退出 → 未登录访问被拦截。
 3. `SELECT COUNT(*) FROM users;` 确认冒烟脚本随机账号会残留测试数据，需要时可以自行清理：`DELETE FROM tasks; DELETE FROM users;`（两个表有外键，先删 tasks）。
+
+
+
+⭐本项目已在 LINUX DO 社区进行开源自荐与交流，欢迎佬友监督、反馈和贡献。
